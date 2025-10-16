@@ -2,51 +2,28 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
-import helmet from "helmet"; // 🔒 CSP 보안 설정 추가
+import path from "path";
+import { fileURLToPath } from "url";
 
+// 🧭 환경설정
 dotenv.config();
 const app = express();
-
-// ✅ Helmet 설정: 폰트, 이미지, 스타일 허용
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      useDefaults: true,
-      directives: {
-        "default-src": ["'self'"],
-        "font-src": [
-          "'self'",
-          "data:",
-          "https://ai-scheduler-xkcb.onrender.com"
-        ],
-        "style-src": [
-          "'self'",
-          "'unsafe-inline'",
-          "https://fonts.googleapis.com"
-        ],
-        "img-src": ["'self'", "data:"],
-        "script-src": ["'self'", "https://cdn.jsdelivr.net"],
-        "connect-src": ["'self'", "https://openrouter.ai"], // OpenRouter 호출 허용
-      },
-    },
-  })
-);
-
 app.use(cors());
 app.use(express.json());
 
+// 🌍 환경변수 확인
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 if (!OPENROUTER_KEY) {
   console.error("❌ OPENROUTER_API_KEY가 없습니다. .env 확인!");
   process.exit(1);
 }
 
-// 🧭 오늘 날짜 ISO
+// 날짜 포맷
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// 🧩 JSON 파싱 유틸
+// AI 응답 JSON 파싱
 function safeParseJsonFromText(raw) {
   if (!raw) return null;
   const m = raw.match(/\{[\s\S]*\}/);
@@ -58,7 +35,7 @@ function safeParseJsonFromText(raw) {
   }
 }
 
-// 💬 OpenRouter 호출
+// 🧠 OpenRouter 호출
 async function callOpenRouter(prompt, model) {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -84,7 +61,7 @@ async function callOpenRouter(prompt, model) {
   return { raw, data };
 }
 
-// 📅 일정 추출
+// 📅 일정 추출 함수
 async function extractSchedule(message) {
   const today = todayISO();
   const prompt = `
@@ -102,15 +79,15 @@ async function extractSchedule(message) {
     );
     const parsed = safeParseJsonFromText(raw);
     if (parsed && (parsed.date || parsed.content)) return parsed;
-    console.warn("Mistral 응답이 JSON 아님/비어있음:", raw);
+    console.warn("⚠️ Mistral 응답이 JSON 아님/비어있음:", raw);
   } catch (err) {
-    console.warn("Mistral 호출 실패:", err.message);
+    console.warn("⚠️ Mistral 호출 실패:", err.message);
   }
 
   return { date: null, content: null };
 }
 
-// 💬 API 엔드포인트
+// 💬 Chat API 엔드포인트
 app.post("/api/chat", async (req, res) => {
   const message = req.body?.message || "";
   console.log("📩 받은 메시지:", message);
@@ -136,22 +113,19 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ 서버 실행 중 (PORT ${PORT})`));
-
-
-import path from "path";
-import { fileURLToPath } from "url";
-
-// 경로 설정
+// 🪄 --- 여기서부터 배포용 React 연결 ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// ✅ React 정적 빌드 파일 서빙
 const clientPath = path.join(__dirname, "../dist");
+
+// ✅ 정적 파일 제공 (React 빌드 파일)
 app.use(express.static(clientPath));
 
-// ✅ 나머지 경로는 React로 라우팅
+// ✅ 나머지 경로는 React의 index.html로 리디렉트
 app.get("*", (req, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
 });
+
+// 🚀 서버 실행
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ 서버 실행 중 (PORT ${PORT})`));
