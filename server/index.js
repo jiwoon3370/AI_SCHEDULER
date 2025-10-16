@@ -138,3 +138,20 @@ app.post("/api/chat", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ 서버 실행 중 (PORT ${PORT})`));
+
+
+import path from "path";
+import { fileURLToPath } from "url";
+
+// 경로 설정
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ✅ React 정적 빌드 파일 서빙
+const clientPath = path.join(__dirname, "../dist");
+app.use(express.static(clientPath));
+
+// ✅ 나머지 경로는 React로 라우팅
+app.get("*", (req, res) => {
+  res.sendFile(path.join(clientPath, "index.html"));
+});
