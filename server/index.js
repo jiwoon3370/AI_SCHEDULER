@@ -2,9 +2,36 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import helmet from "helmet"; // 🔒 CSP 보안 설정 추가
 
 dotenv.config();
 const app = express();
+
+// ✅ Helmet 설정: 폰트, 이미지, 스타일 허용
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "font-src": [
+          "'self'",
+          "data:",
+          "https://ai-scheduler-xkcb.onrender.com"
+        ],
+        "style-src": [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com"
+        ],
+        "img-src": ["'self'", "data:"],
+        "script-src": ["'self'", "https://cdn.jsdelivr.net"],
+        "connect-src": ["'self'", "https://openrouter.ai"], // OpenRouter 호출 허용
+      },
+    },
+  })
+);
+
 app.use(cors());
 app.use(express.json());
 
@@ -14,10 +41,12 @@ if (!OPENROUTER_KEY) {
   process.exit(1);
 }
 
+// 🧭 오늘 날짜 ISO
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// 🧩 JSON 파싱 유틸
 function safeParseJsonFromText(raw) {
   if (!raw) return null;
   const m = raw.match(/\{[\s\S]*\}/);
@@ -29,6 +58,7 @@ function safeParseJsonFromText(raw) {
   }
 }
 
+// 💬 OpenRouter 호출
 async function callOpenRouter(prompt, model) {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -54,6 +84,7 @@ async function callOpenRouter(prompt, model) {
   return { raw, data };
 }
 
+// 📅 일정 추출
 async function extractSchedule(message) {
   const today = todayISO();
   const prompt = `
@@ -64,18 +95,22 @@ async function extractSchedule(message) {
 문장: "${message}"
 `;
 
-try {
-  const { raw } = await callOpenRouter(prompt, "mistralai/devstral-small-2505:free");
-  const parsed = safeParseJsonFromText(raw);
-  if (parsed && (parsed.date || parsed.content)) return parsed;
-  console.warn("Mistral 응답이 JSON 아님/비어있음:", raw);
-} catch (err) {
-  console.warn("Mistral 호출 실패:", err.message);
-}
+  try {
+    const { raw } = await callOpenRouter(
+      prompt,
+      "mistralai/devstral-small-2505:free"
+    );
+    const parsed = safeParseJsonFromText(raw);
+    if (parsed && (parsed.date || parsed.content)) return parsed;
+    console.warn("Mistral 응답이 JSON 아님/비어있음:", raw);
+  } catch (err) {
+    console.warn("Mistral 호출 실패:", err.message);
+  }
 
   return { date: null, content: null };
 }
 
+// 💬 API 엔드포인트
 app.post("/api/chat", async (req, res) => {
   const message = req.body?.message || "";
   console.log("📩 받은 메시지:", message);
