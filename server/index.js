@@ -122,7 +122,7 @@ const clientPath = path.join(__dirname, "../dist");
 app.use(express.static(clientPath));
 
 // ✅ 나머지 경로는 React의 index.html로 리디렉트
-app.get("*", (req, res) => {
+app.get("/*", (req, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
 });
 
