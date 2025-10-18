@@ -1,11 +1,9 @@
-// vite.config.js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  root: ".", // ✅ index.html이 루트에 있음
   build: {
     outDir: "dist",
     emptyOutDir: true,
@@ -15,7 +13,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
-  optimizeDeps: {
-    include: ["react-calendar"],
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
