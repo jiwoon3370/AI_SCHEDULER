@@ -4,15 +4,21 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  root: ".", // ✅ 루트를 프로젝트 최상단으로 (index.html이 있는 곳)
+  root: ".", // ✅ index.html 위치
   build: {
-    outDir: "dist", // ✅ 빌드 파일 저장 위치
-    emptyOutDir: true, // ✅ 기존 dist 자동 비우기
+    outDir: "dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      external: [], // 기본값 유지 (여기에 react-calendar 있으면 안 됨)
+    },
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"), // ✅ 절대 경로 import 지원
+      "@": path.resolve(__dirname, "src"),
     },
+  },
+  optimizeDeps: {
+    include: ["react-calendar"], // ✅ vite이 react-calendar를 미리 번들링
   },
   server: {
     proxy: {
