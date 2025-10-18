@@ -1,9 +1,18 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import path from "path";
 
 export default defineConfig({
-  root:".",
   plugins: [react()],
+  root: ".", // 프로젝트 루트가 AI_SCHEDULER
+  build: {
+    outDir: "dist",
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
+  },
   server: {
     proxy: {
       "/api": {
