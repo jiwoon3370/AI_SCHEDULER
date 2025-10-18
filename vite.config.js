@@ -4,13 +4,14 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
-  root: ".", // 프로젝트 루트가 AI_SCHEDULER
+  root: ".", // ✅ 루트를 프로젝트 최상단으로 (index.html이 있는 곳)
   build: {
-    outDir: "dist",
+    outDir: "dist", // ✅ 빌드 파일 저장 위치
+    emptyOutDir: true, // ✅ 기존 dist 자동 비우기
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      "@": path.resolve(__dirname, "src"), // ✅ 절대 경로 import 지원
     },
   },
   server: {
