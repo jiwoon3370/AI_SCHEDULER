@@ -1,111 +1,68 @@
+// server/index.js
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import multer from "multer";
-import fs from "fs";
-import path from "path";
 import fetch from "node-fetch";
-import OpenAI from "openai";
+import multer from "multer";
+import helmet from "helmet";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// ✅ 미들웨어
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
+app.use(cors({
+  origin: [
+    "https://ai-scheduler.netlify.app", // ✅ Netlify 도메인
+    "http://localhost:5173"
+  ],
+  methods: ["GET", "POST"],
+}));
 
-// 📁 파일 업로드 경로
-const upload = multer({ dest: "uploads/" });
+// ✅ 파일 업로드용 multer 설정
+const upload = multer({ storage: multer.memoryStorage() });
 
-// 📅 일정 저장 파일
-const calendarFile = path.join(process.cwd(), "calendar.json");
-
-// ⚙️ Mistral API 설정
-const client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-});
-
-// ✅ 기본 루트 확인용
+// ✅ 기본 라우트
 app.get("/", (req, res) => {
-  res.send("✅ AI Scheduler Server Running");
+  res.send("AI Scheduler backend is running ✅");
 });
 
-// ✅ 채팅 메시지 분석 (AI)
-app.post("/api/analyze", async (req, res) => {
+// ✅ AI 요청 처리 예시
+app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
-    console.log("📩 받은 메시지:", message);
 
-    const response = await client.chat.completions.create({
-      model: "mistralai/devstral-small-2505:free",
-      messages: [
-        {
-          role: "system",
-          content:
-            "너는 일정 인식 비서야. 사용자의 문장에서 날짜와 일정 내용을 추출해 JSON 형식으로 대답해. 예: { 'date': '2025-10-14', 'content': '회의' }",
-        },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: message }],
+      }),
     });
 
-    const aiText = response.choices?.[0]?.message?.content || "{}";
-    console.log("🧠 인식 결과:", aiText);
-    res.json({ result: aiText });
-  } catch (error) {
-    console.error("Mistral 호출 실패:", error.message);
-    res.status(500).json({ error: error.message });
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error("❌ Chat API Error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ✅ 파일 업로드 및 분류
+// ✅ 파일 업로드 예시 (선택사항)
 app.post("/api/upload", upload.single("file"), (req, res) => {
-  const file = req.file;
-  let type = "기타";
-
-  if (file.mimetype.includes("image")) type = "이미지";
-  else if (file.mimetype.includes("pdf")) type = "PDF 문서";
-  else if (file.mimetype.includes("text")) type = "텍스트 파일";
-  else if (file.mimetype.includes("video")) type = "동영상";
-
-  res.json({
-    filename: file.originalname,
-    type,
-    path: file.path,
-  });
+  if (!req.file) return res.status(400).send("No file uploaded.");
+  console.log("📁 File received:", req.file.originalname);
+  res.json({ message: "File uploaded successfully!" });
 });
 
-// ✅ 일정 추가
-app.post("/api/add-event", (req, res) => {
-  const { date, content } = req.body;
-  if (!date || !content)
-    return res.status(400).json({ error: "date와 content 필요" });
-
-  let data = [];
-  if (fs.existsSync(calendarFile)) {
-    data = JSON.parse(fs.readFileSync(calendarFile, "utf-8"));
-  }
-
-  const newEvent = { id: Date.now(), date, content };
-  data.push(newEvent);
-  fs.writeFileSync(calendarFile, JSON.stringify(data, null, 2));
-
-  res.json({ success: true, event: newEvent });
-});
-
-// ✅ 일정 전체 불러오기
-app.get("/api/events", (req, res) => {
-  if (!fs.existsSync(calendarFile)) return res.json([]);
-  const data = JSON.parse(fs.readFileSync(calendarFile, "utf-8"));
-  res.json(data);
-});
-
-// ✅ 서버 실행
+// ✅ 서버 시작
 app.listen(PORT, () => {
-  console.log(`✅ 서버 실행 중 (PORT ${PORT})`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
