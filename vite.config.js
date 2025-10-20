@@ -14,6 +14,10 @@ export default defineConfig({
     },
   },
   server: {
+    // Allow binding to network interfaces (required for some preview hosts)
+    host: true,
+    // Add Netlify preview host so requests from Netlify devserver aren't blocked
+    allowedHosts: ["devserver-main--aischeduler.netlify.app"],
     proxy: {
       "/api": {
         target: "http://localhost:5000",
@@ -23,3 +27,4 @@ export default defineConfig({
     },
   },
 });
+
