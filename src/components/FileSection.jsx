@@ -9,6 +9,8 @@ export default function FileSection(){
     }
   })
 
+  const [desc, setDesc] = useState('')
+
   useEffect(() => {
     localStorage.setItem('ai_scheduler_files', JSON.stringify(files))
   }, [files])
@@ -23,9 +25,11 @@ export default function FileSection(){
       size: f.size,
       type: f.type,
       url,
+      description: desc,
       uploadedAt: new Date().toISOString()
     }
     setFiles(prev => [item, ...prev])
+    setDesc('')
   }
 
   function handleDownload(file){
@@ -39,9 +43,17 @@ export default function FileSection(){
     <div>
       <label className="block mb-3">
         <input type="file" onChange={handleUpload} className="hidden" id="fileupload" />
-        <button onClick={() => document.getElementById('fileupload').click()} className="px-3 py-2 bg-slate-100 rounded">
-          업로드
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => document.getElementById('fileupload').click()} className="px-3 py-2 bg-slate-100 rounded">
+            파일 선택
+          </button>
+          <input
+            className="flex-1 border px-2 py-1 rounded"
+            placeholder="파일 설명을 입력하세요"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+          />
+        </div>
       </label>
 
       <div className="space-y-2 max-h-56 overflow-auto">

@@ -1,102 +1,66 @@
 import React, { useState, useEffect } from "react";
-import Calendar from "react-calendar";
-import "react-calendar/dist/Calendar.css";
+import Sidebar from "./components/Sidebar";
+import CalendarView from "./components/CalendarView";
+import ChatBox from "./components/ChatBox";
+import ChatInput from "./components/ChatInput";
+import FileSection from "./components/FileSection";
 
-function App() {
-  const [message, setMessage] = useState("");
-  const [events, setEvents] = useState([]);
-  const [fileInfo, setFileInfo] = useState(null);
+export default function App() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [messages, setMessages] = useState([
+    { role: "assistant", text: "안녕하세요! 일정이나 파일에 대해 물어보세요." },
+  ]);
 
   useEffect(() => {
+    // 기존 이벤트 로드 (백엔드가 없으면 빈 배열)
     fetch("/api/events")
-      .then((res) => res.json())
-      .then(setEvents)
-      .catch(() => setEvents([]));
+      .then((r) => r.json())
+      .then((d) => setSchedules(d || []))
+      .catch(() => setSchedules([]));
   }, []);
 
-  // ✉️ AI 분석 요청
-  async function analyzeMessage() {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    });
-    const data = await res.json();
-    alert("AI 분석 결과:\n" + JSON.stringify(data.result, null, 2));
+  function handleNewMessage(text, role = "user") {
+    setMessages((m) => [...m, { role, text }]);
   }
 
-  // 📂 파일 업로드
-  async function handleFileUpload(e) {
-    const file = e.target.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    setFileInfo(data);
-  }
-
-  // 🗓️ 일정 추가
-  async function addEvent() {
-    const date = prompt("날짜 입력 (YYYY-MM-DD)");
-    const content = prompt("일정 내용 입력");
-    const res = await fetch("/api/add-event", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, content }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert("✅ 일정 추가 완료!");
-      setEvents((prev) => [...prev, data.event]);
-    }
+  function handleNewSchedule(schedule) {
+    setSchedules((s) => [schedule, ...s]);
   }
 
   return (
-    <div className="p-6 font-sans">
-      <h1 className="text-2xl font-bold mb-4">📅 AI SCHEDULER</h1>
+    <div className="min-h-screen flex bg-slate-50 text-slate-800">
+      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <div className="flex gap-4 mb-4">
-        <input
-          className="border p-2 flex-1"
-          placeholder="메시지를 입력하세요"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
-        <button onClick={analyzeMessage} className="bg-blue-500 text-white px-4 rounded">
-          AI 분석
-        </button>
-      </div>
+      <main className="flex-1 p-6">
+        <div className="flex items-start gap-6">
+          <section className="flex-1 bg-white rounded-xl p-6 shadow">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Calendar</h2>
+              <div>
+                <button className="px-3 py-1 bg-indigo-600 text-white rounded">New</button>
+              </div>
+            </div>
 
-      <div className="flex gap-4 mb-4">
-        <input type="file" onChange={handleFileUpload} />
-        <button onClick={addEvent} className="bg-green-500 text-white px-4 rounded">
-          일정 추가
-        </button>
-      </div>
+            <CalendarView schedules={schedules} />
+          </section>
 
-      {fileInfo && (
-        <div className="bg-gray-100 p-2 rounded mb-4">
-          <strong>📂 파일 분류 결과:</strong>
-          <p>이름: {fileInfo.filename}</p>
-          <p>유형: {fileInfo.type}</p>
+          <aside className="w-[420px] flex flex-col gap-4">
+            <div className="bg-white rounded-xl shadow flex-1 flex flex-col overflow-hidden">
+              <ChatBox messages={messages} />
+              <ChatInput
+                onNewSchedule={(sch) => handleNewSchedule(sch)}
+                onSend={(text) => handleNewMessage(text)}
+              />
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-4">
+              <h3 className="font-semibold mb-2">Files</h3>
+              <FileSection />
+            </div>
+          </aside>
         </div>
-      )}
-
-      <Calendar
-        className="border rounded-lg p-2"
-        tileContent={({ date }) => {
-          const hasEvent = events.find(
-            (e) => e.date === date.toISOString().split("T")[0]
-          );
-          return hasEvent ? <span className="text-blue-600 text-xs">●</span> : null;
-        }}
-      />
+      </main>
     </div>
   );
 }
-
-export default App;
