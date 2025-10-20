@@ -8,10 +8,10 @@
 
 2) Netlify에 배포
 - Netlify 대시보드에서 Site settings → Build & deploy → Environment에 아래 환경변수를 추가하세요:
-  - OPENROUTER_API_KEY = (실제 키)
+  - OPENROUTER_API_KEY = (실제 키, 입력 시 값만 넣으세요)
   - MODEL = (모델 이름)
-  - VITE_SITE_NAME = AI_SCHEDULER
-  - VITE_DEV_PROXY_TARGET = http://localhost:5000 (선택)
+  - VITE_SITE_NAME = (공개용 사이트 이름)
+  - VITE_DEV_PROXY_TARGET = (예: http://localhost:5000)  (선택)
 - 추가한 뒤 Deploys에서 'Clear cache and deploy site'를 클릭하세요.
 
 3) 키 교체 권장
