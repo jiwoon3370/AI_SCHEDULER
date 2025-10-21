@@ -17,20 +17,26 @@ export default function App() {
     // Supabase에서 이벤트 로드
     let mounted = true;
     async function loadEvents() {
+      if (!supabase) {
+        console.warn('Supabase not configured — skipping events load')
+        if (mounted) setSchedules([])
+        return
+      }
+
       try {
         const { data, error } = await supabase
           .from("events")
           .select("*")
-          .order("date", { ascending: false });
+          .order("date", { ascending: false })
         if (error) {
-          console.error("Supabase fetch error:", error);
-          if (mounted) setSchedules([]);
-          return;
+          console.error("Supabase fetch error:", error)
+          if (mounted) setSchedules([])
+          return
         }
-        if (mounted) setSchedules(data || []);
+        if (mounted) setSchedules(data || [])
       } catch (err) {
-        console.error(err);
-        if (mounted) setSchedules([]);
+        console.error(err)
+        if (mounted) setSchedules([])
       }
     }
 
