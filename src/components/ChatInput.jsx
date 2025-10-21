@@ -10,7 +10,8 @@ function ChatInput({ onNewSchedule }) {
     setLoading(true);
 
     try {
-      const res = await fetch("/​.netlify/functions/chat", {
+      // ✅ 제로폭 공백 제거된 진짜 경로
+      const res = await fetch("/.netlify/functions/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input }),
