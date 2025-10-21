@@ -4,6 +4,7 @@ import CalendarView from "./components/CalendarView";
 import ChatBox from "./components/ChatBox";
 import ChatInput from "./components/ChatInput";
 import FileSection from "./components/FileSection";
+import { supabase } from "./lib/supabaseClient";
 
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
@@ -13,11 +14,30 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    // 기존 이벤트 로드 (백엔드가 없으면 빈 배열)
-    fetch("/api/events")
-      .then((r) => r.json())
-      .then((d) => setSchedules(d || []))
-      .catch(() => setSchedules([]));
+    // Supabase에서 이벤트 로드
+    let mounted = true;
+    async function loadEvents() {
+      try {
+        const { data, error } = await supabase
+          .from("events")
+          .select("*")
+          .order("date", { ascending: false });
+        if (error) {
+          console.error("Supabase fetch error:", error);
+          if (mounted) setSchedules([]);
+          return;
+        }
+        if (mounted) setSchedules(data || []);
+      } catch (err) {
+        console.error(err);
+        if (mounted) setSchedules([]);
+      }
+    }
+
+    loadEvents();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   function handleNewMessage(text, role = "user") {
